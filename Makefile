@@ -3,7 +3,7 @@ MODULE   := github.com/VibhuviOiO/openldap-exporter
 VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 REVISION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS  := -s -w -X $(MODULE)/internal/collector.Version=$(VERSION) -X $(MODULE)/internal/collector.Revision=$(REVISION)
-IMAGE    ?= ghcr.io/VibhuviOiO/$(BIN)
+IMAGE    ?= vibhuvioio/$(BIN)
 
 export GOTOOLCHAIN ?= local
 export CGO_ENABLED  = 0

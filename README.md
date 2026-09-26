@@ -116,8 +116,10 @@ openldap-exporter -config openldap-exporter.yml -check
 docker run -p 9330:9330 \
   -v $PWD/openldap-exporter.yml:/etc/openldap-exporter/openldap-exporter.yml:ro \
   -e LDAP_PASSWORD -e LDAP_CONFIG_PASSWORD \
-  ghcr.io/VibhuviOiO/openldap-exporter:latest
+  vibhuvioio/openldap-exporter:latest
 ```
+
+Also on GHCR: `ghcr.io/vibhuvioio/openldap-exporter:latest`.
 
 ### systemd
 
