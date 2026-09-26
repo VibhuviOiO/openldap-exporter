@@ -1,0 +1,46 @@
+# /etc/systemd/system/openldap-exporter.service
+#
+#   useradd -r -s /sbin/nologin openldap-exporter
+#   install -m 755 openldap-exporter /usr/local/bin/
+#   install -d -m 750 -o root -g openldap-exporter /etc/openldap-exporter
+#   install -m 640 -o root -g openldap-exporter openldap-exporter.yml /etc/openldap-exporter/
+#   # secrets: EnvironmentFile, mode 640, same group
+#   printf 'LDAP_PASSWORD=...\nLDAP_CONFIG_PASSWORD=...\n' > /etc/openldap-exporter/env
+#   chmod 640 /etc/openldap-exporter/env; chgrp openldap-exporter /etc/openldap-exporter/env
+#   systemctl daemon-reload && systemctl enable --now openldap-exporter
+
+[Unit]
+Description=Prometheus exporter for OpenLDAP (cn=Monitor, contextCSN, syncrepl)
+Documentation=https://github.com/VibhuviOiO/openldap-exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openldap-exporter
+Group=openldap-exporter
+EnvironmentFile=/etc/openldap-exporter/env
+ExecStart=/usr/local/bin/openldap-exporter -config /etc/openldap-exporter/openldap-exporter.yml -log.format json
+Restart=on-failure
+RestartSec=5s
+
+# Hardening. The exporter needs the network and read access to its config;
+# nothing else.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

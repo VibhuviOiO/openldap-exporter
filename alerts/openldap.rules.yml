@@ -1,0 +1,217 @@
+# Prometheus alerting rules for openldap-exporter.
+#
+# Every rule here corresponds to a failure that has actually happened on a real
+# estate, or to a config drift that makes such a failure invisible when it does.
+# Thresholds assume a 30s scrape interval.
+
+groups:
+  - name: openldap.availability
+    rules:
+      - alert: OpenLDAPDown
+        expr: openldap_up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.target }} is not answering"
+          description: "Bind or connect to {{ $labels.target }} has failed for 2 minutes."
+
+      - alert: OpenLDAPScrapeSlow
+        expr: openldap_scrape_duration_seconds > 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} scrape takes {{ $value | humanizeDuration }}"
+          description: "Slow scrapes usually mean a slow server, or entry counts on a large subtree. Trim `entries:` or raise scrape_timeout."
+
+      - alert: OpenLDAPRecentlyRestarted
+        expr: openldap_uptime_seconds < 3600
+        labels: {severity: info}
+        annotations:
+          summary: "{{ $labels.target }} restarted {{ $value | humanizeDuration }} ago"
+          description: >
+            A restart empties the syncprov session log. The next consumer refresh falls back to a
+            full present phase, which deletes any consumer-only entries in scope. If this node is a
+            provider to a QA cluster with local test users, expect them to disappear.
+
+  - name: openldap.replication
+    rules:
+      - alert: OpenLDAPReplicationLag
+        expr: openldap_replication_lag_seconds > 30
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} is {{ $value | humanizeDuration }} behind on sid {{ $labels.sid }}"
+          description: "Another member of group {{ $labels.group }} holds a newer contextCSN for sid {{ $labels.sid }} in {{ $labels.suffix }}."
+
+      - alert: OpenLDAPReplicationLagCritical
+        expr: openldap_replication_lag_seconds > 300
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.target }} is {{ $value | humanizeDuration }} behind on sid {{ $labels.sid }}"
+
+      - alert: OpenLDAPReplicationSidMissing
+        # A prod sid missing from a node that should carry it. QA sids missing
+        # on prod are expected (one-way) - exclude them by role.
+        expr: openldap_replication_sid_missing == 1 and on(target) openldap_up == 1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} has never received sid {{ $labels.sid }}"
+          description: >
+            Another member of group {{ $labels.group }} carries contextCSN sid {{ $labels.sid }} and
+            this node does not. Either the link from that sid's node is dead, or this is a consumer
+            that must not receive it (a QA sid on prod is correct - silence that case by label).
+
+      - alert: OpenLDAPGroupOutOfSync
+        expr: openldap_replication_group_in_sync == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "group {{ $labels.group }} is not converged on {{ $labels.suffix }}"
+          description: "Worst lag in the group: {{ with printf `openldap_replication_group_max_lag_seconds{group=\"%s\",suffix=\"%s\"}` $labels.group $labels.suffix | query }}{{ . | first | value | humanizeDuration }}{{ end }}."
+
+      - alert: OpenLDAPSyncreplLinkNotOnProvider
+        # The consumer's config says it consumes from the provider, but the
+        # provider holds no connection from it. This is the blackholed-link
+        # signature: the consumer's own socket still looks ESTABLISHED.
+        expr: openldap_syncrepl_link_seen_on_provider == 0
+        for: 3m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.provider }} has no connection from {{ $labels.consumer }} (rid {{ $labels.rid }})"
+          description: >
+            Read from the provider's cn=Connections. The consumer will report a healthy socket and
+            log nothing. On the provider, `ss -tnp | grep :389` and look for Send-Q > 0.
+
+      - alert: OpenLDAPEntryCountDiverged
+        # Same named count differs between members of a group. QA-only records
+        # make QA legitimately higher than prod; alert on prod members only.
+        expr: |
+          max by (group, name) (openldap_entries{role="provider"})
+            - min by (group, name) (openldap_entries{role="provider"}) > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "entry count '{{ $labels.name }}' differs across group {{ $labels.group }}"
+
+  - name: openldap.config-drift
+    rules:
+      - alert: OpenLDAPSyncreplNoKeepalive
+        expr: openldap_syncrepl_consumer_keepalive == 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} rid {{ $labels.rid }} has no keepalive"
+          description: >
+            An idle refreshAndPersist connection crossing a stateful firewall is dropped from the
+            firewall's table with no RST. Both ends stay ESTABLISHED, the provider's pushes vanish,
+            retry never fires. Add keepalive=60:3:10 to the olcSyncRepl statement.
+
+      - alert: OpenLDAPSyncreplRetryNotForever
+        expr: openldap_syncrepl_consumer_retry_forever == 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} rid {{ $labels.rid }} retry list is finite"
+          description: "retry must end with '+'. Without it the consumer gives up for good after the list is exhausted and never reconnects."
+
+      - alert: OpenLDAPSyncreplSelfReference
+        expr: openldap_syncrepl_consumer_self_reference == 1
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.target }} rid {{ $labels.rid }} points at itself"
+          description: "A per-node config file was applied on the wrong host."
+
+      - alert: OpenLDAPOneWayReplicationBroken
+        # Adjust the group names to your estate. A prod node consuming from a
+        # QA node means QA writes reach prod.
+        expr: openldap_syncrepl_consumer_provider_group{group="prod", provider_group!="prod"} == 1
+        labels: {severity: critical}
+        annotations:
+          summary: "prod node {{ $labels.target }} consumes from {{ $labels.provider_host }} ({{ $labels.provider_group }})"
+
+      - alert: OpenLDAPMultiProviderOff
+        # A node with syncrepl statements but neither olcMultiProvider nor
+        # olcMirrorMode refuses direct client writes.
+        expr: openldap_database_multiprovider == 0 and on(target) openldap_syncrepl_consumers > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} runs syncrepl without olcMultiProvider"
+          description: "Clients cannot write to this node. Testers on a QA cluster cannot create users."
+
+      - alert: OpenLDAPReadOnly
+        expr: openldap_database_readonly == 1
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} {{ $labels.suffix }} is read-only"
+
+      - alert: OpenLDAPSyncprovOverlayCount
+        expr: openldap_syncprov_overlays{suffix!=""} != 1 and on(target) openldap_syncrepl_consumers > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} has {{ $value }} syncprov overlays on {{ $labels.suffix }}"
+          description: "A replicating database needs exactly one. Two was the state of the old cluster; zero means this node cannot serve as a provider."
+
+      - alert: OpenLDAPLogLevelHidesSync
+        expr: openldap_log_level_info{level!~"(?i).*sync.*"} == 1
+        labels: {severity: info}
+        annotations:
+          summary: "{{ $labels.target }} olcLogLevel is '{{ $labels.level }}' - replication is not logged"
+          description: "'stats' alone does not log syncrepl. A dead link produces no log line at all. Use 'stats sync'."
+
+      - alert: OpenLDAPServerIDDuplicate
+        expr: count by (group, server_id) (label_replace(openldap_server_id, "server_id", "$1", "__value__", "(.*)")) > 1
+        labels: {severity: critical}
+        annotations:
+          summary: "olcServerID reused within group {{ $labels.group }}"
+          description: "Two nodes generate CSNs with the same sid. Replication ordering is undefined."
+
+  - name: openldap.capacity
+    rules:
+      - alert: OpenLDAPMDBMapNearlyFull
+        expr: openldap_mdb_pages_used_ratio > 0.8
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} LMDB map {{ $value | humanizePercentage }} used"
+          description: "LMDB fails hard at 100% (MDB_MAP_FULL) and slapd stops accepting writes. Raise olcDbMaxSize before that."
+
+      - alert: OpenLDAPMDBMapFull
+        expr: openldap_mdb_pages_used_ratio > 0.95
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.target }} LMDB map {{ $value | humanizePercentage }} used"
+
+      - alert: OpenLDAPMDBReadersExhausted
+        expr: openldap_mdb_readers_used / openldap_mdb_readers_max > 0.9
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} LMDB reader slots {{ $value | humanizePercentage }} used"
+
+      - alert: OpenLDAPThreadsSaturated
+        expr: openldap_threads{kind="active"} >= openldap_threads{kind="max"} * 0.9
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} thread pool saturated"
+
+      - alert: OpenLDAPPendingOps
+        expr: openldap_threads{kind="pending"} > 10
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} has {{ $value }} operations queued"
+
+      - alert: OpenLDAPClockSkew
+        expr: abs(openldap_server_time_seconds - on() group_left() avg(openldap_server_time_seconds)) > 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} clock differs from the estate average by {{ $value | humanizeDuration }}"
+          description: "A CSN is a timestamp. Skew reorders writes and can make a change invisible. Check chronyd."
+
+      - alert: OpenLDAPTLSCertExpiring
+        expr: (openldap_tls_certificate_expiry_seconds - time()) < 14 * 86400
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.target }} certificate expires in {{ $value | humanizeDuration }}"

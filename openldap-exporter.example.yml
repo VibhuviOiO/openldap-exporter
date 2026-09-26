@@ -1,0 +1,92 @@
+# openldap-exporter configuration
+#
+# ${VAR} is expanded from the environment at load time. Unknown variables are
+# left as-is so a typo shows up in --check output rather than as a blank
+# password.
+
+listen: ":9330"
+metrics_path: /metrics
+scrape_timeout: 10s
+
+# How often cn=config is re-read, independent of the Prometheus scrape interval.
+#
+# cn=config only changes when you change it, and the olcSyncRepl values it
+# returns carry a cleartext bind password - which, without LDAPS, crosses the
+# network on every read. Caching it keeps the config-drift metrics while cutting
+# how often that password is transmitted.
+#
+# Default 10m. Set to 0 to read cn=config on every scrape.
+config_interval: 10m
+
+# Inherited by every target that does not override the field.
+defaults:
+  bind_dn: cn=Manager,dc=example,dc=com
+  password: ${LDAP_PASSWORD}
+  # password_file: /run/secrets/ldap-password        # alternative to inline
+
+  # cn=config access enables the syncrepl topology, keepalive, retry,
+  # serverID, multiprovider and readonly metrics. Optional but recommended.
+  config_bind_dn: cn=config
+  config_password: ${LDAP_CONFIG_PASSWORD}
+
+  starttls: false
+  tls_skip_verify: false
+  # tls_ca_file: /etc/ssl/certs/internal-ca.pem
+
+# One target per server. Lag is computed between members of the same group.
+#
+# A QA node that consumes from prod belongs in the SAME group as prod: it must
+# carry prod's sids, and that is what lag measures. Its own sids (029, 02a
+# below) will show as "missing" on prod - that is the one-way guarantee, and
+# it is correct. Put QA in its own group only if it must NOT track prod.
+targets:
+  - name: ldap-prod-1
+    uri: ldap://ldap-prod-1.example.com:389
+    group: prod
+    role: provider
+  - name: ldap-prod-2
+    uri: ldap://ldap-prod-2.example.com:389
+    group: prod
+    role: provider
+  - name: ldap-prod-3
+    uri: ldap://ldap-prod-3.example.com:389
+    group: prod
+    role: provider
+  - name: ldap-qa-1
+    uri: ldap://ldap-qa-1.example.com:389
+    group: prod          # tracks prod, so measured against prod
+    role: qa
+  - name: ldap-qa-2
+    uri: ldap://ldap-qa-2.example.com:389
+    group: prod
+    role: qa
+
+# Suffixes whose contextCSN is read. Empty = every namingContext on the root DSE.
+suffixes:
+  - dc=example,dc=com
+
+# Searches whose entry count is exported as openldap_entries{name=...}.
+# The exporter asks for no attributes ("1.1"), so these are cheap on the wire,
+# but a subtree count still walks the whole tree. Keep the list short on very
+# large directories, or restrict with `targets:`.
+entries:
+  - name: all
+    base: dc=example,dc=com
+    filter: (objectClass=*)
+  - name: people
+    base: ou=People,dc=example,dc=com
+    filter: (objectClass=inetOrgPerson)
+  # A filtered count against your own custom schema, if you have one - replace
+  # exampleCustomClass with the objectClass your directory actually uses.
+  - name: custom_schema_users
+    base: ou=People,dc=example,dc=com
+    filter: (objectClass=exampleCustomClass)
+
+replication:
+  # How far behind a replica may be and still report in_sync = 1.
+  in_sync_tolerance: 5s
+
+  # Optional: sids each group is expected to carry. A sid that has never
+  # written anything would otherwise be invisible. serverID 31 -> sid 01f.
+  expected_sids:
+    prod: ["01f", "020", "021"]

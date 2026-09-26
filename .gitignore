@@ -1,0 +1,8 @@
+/bin/
+/dist/
+/openldap-exporter
+/openldap-exporter.yml
+*.test
+*.out
+coverage.*
+.DS_Store
