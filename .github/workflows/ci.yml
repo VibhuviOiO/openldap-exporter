@@ -34,7 +34,8 @@ jobs:
       - name: staticcheck
         uses: dominikh/staticcheck-action@v1
         with:
-          version: "2024.1.1"
+          # 2024.1.1 pulls x/tools v0.21, which does not compile under Go 1.27
+          version: "2026.2.1"
 
       - name: test
         run: go test -race -cover -coverprofile=coverage.out ./...
@@ -73,7 +74,8 @@ jobs:
       - name: prometheus/promtool check rules
         uses: docker://prom/prometheus:latest
         with:
-          args: promtool check rules /github/workspace/alerts/openldap.rules.yml
+          entrypoint: promtool
+          args: check rules /github/workspace/alerts/openldap.rules.yml
 
   docker:
     needs: test

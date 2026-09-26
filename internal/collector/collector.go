@@ -8,7 +8,6 @@ import (
 	"context"
 	"log/slog"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -390,6 +389,3 @@ func b2f(b bool) float64 {
 	}
 	return 0
 }
-
-// ftoa is used by tests.
-func ftoa(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
