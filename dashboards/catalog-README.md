@@ -3,6 +3,8 @@
 Grafana dashboard for [vibhuvioio/openldap-exporter](https://github.com/VibhuviOiO/openldap-exporter),
 covering OpenLDAP 2.6 replication and server health.
 
+**Setup and configuration:** [vibhuvioio.com — Prometheus Exporter](https://vibhuvioio.com/openldap-docker/observability/prometheus-exporter/)
+
 ![Overview](https://raw.githubusercontent.com/VibhuviOiO/openldap-exporter/main/dashboards/screenshots/openldap-overview.png)
 
 ## Required: a `cluster` label
@@ -80,3 +82,7 @@ differ and a sync check reports the pair as not converged — even though both a
 healthy. One write against each node closes it. If you built the cluster by
 loading the same LDIF into both nodes, write something to the second node before
 trusting the sync panels.
+
+---
+
+Full walkthrough: [vibhuvioio.com — Grafana Dashboard](https://vibhuvioio.com/openldap-docker/observability/grafana-dashboard/)
