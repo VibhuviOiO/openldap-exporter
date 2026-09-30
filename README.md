@@ -177,24 +177,35 @@ its authors) has actually seen, including:
 
 ## Dashboards
 
-[`dashboards/openldap.json`](dashboards/openldap.json) — import directly into Grafana (Dashboards →
-Import → Upload). Six rows: Overview, **Topology**, Replication, cn=Monitor, Capacity, with
-`$group`/`$target`/`$cluster` template variables and a restart annotation.
+**Docs:** [vibhuvioio.com — Prometheus Exporter](https://vibhuvioio.com/openldap-docker/observability/prometheus-exporter/)
+and [Grafana Dashboard](https://vibhuvioio.com/openldap-docker/observability/grafana-dashboard/).
 
-**Topology is a live architecture diagram, not a static drawing.** It's a Grafana
-[Node Graph](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/node-graph/)
-panel built from the same metrics as every other panel: every scraped server is a node, and every
-edge is one syncrepl consumer→provider link — drawn from the **provider's own** `cn=Connections`
-(`openldap_syncrepl_link_seen_on_provider`), the same source the "Links not seen on provider" panel
-uses, not from a consumer's config alone. A link the config claims exists but the provider never
-actually accepted looks exactly like what it is on this diagram: a gap. Node ring fill tracks
-`openldap_up`. The panel's finer color/threshold styling may want one pass in Grafana's panel editor
-to taste after import — the node and edge data itself is exactly what the two queries return.
+[`dashboards/openldap.json`](dashboards/openldap.json) — import directly into Grafana (Dashboards →
+Import → Upload). Five rows: Overview, a per-cluster section that repeats for every `cluster` label,
+Replication, cn=Monitor, Capacity — with `$group`/`$target`/`$cluster` template variables and a
+restart annotation.
+
+**The per-cluster section repeats itself.** It carries four KPI tiles (Nodes, Servers up, Records,
+In sync) over a per-node table — Up, Records, Change sets, In sync, Worst lag and Last change — so a
+second estate appears as a second section with no dashboard edit. `Last change` is the newest
+`contextCSN` timestamp on that node: identical values across a cluster mean the nodes converged on
+the same change, and a node that has fallen behind shows an older one.
+
+**Topology is a table, not a drawing.** The Overview's `Replication topology` panel lists one row per
+replication agreement — consumer, provider, RID, and whether the provider actually observed the link
+(`openldap_syncrepl_link_seen_on_provider`) — so a link the config claims exists but the provider
+never accepted shows up as `NO` next to a server that otherwise looks healthy.
+
+This began as a Grafana [Node Graph](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/node-graph/)
+panel and was replaced. Node Graph accepts the data (it needs a nodes frame with an `id` field, and an
+edges frame with `source`/`target` **and no `id`** — a frame carrying `id` is parsed as nodes and you
+get "N nodes are hidden") but it laid the nodes out without drawing the edges, and it cannot be
+verified headless. A table states the same facts without that gamble.
 
 **One dashboard, any number of clusters.** `$cluster` filters on a `cluster` label you attach at
 Prometheus scrape time (see [`docs/PROMETHEUS.md`](docs/PROMETHEUS.md#multiple-exporter-instances-multiple-clusters))
-— it's already wired into every panel, including Topology, and does nothing if you don't use it, so
-running a second exporter for a second estate needs zero dashboard changes.
+— it's already wired into every panel and does nothing if you don't use it, so running a second
+exporter for a second estate needs zero dashboard changes.
 
 ## Comparison
 
