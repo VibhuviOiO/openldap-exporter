@@ -86,7 +86,7 @@
     {
       "id": 10,
       "type": "stat",
-      "title": "Targets up",
+      "title": "Nodes up",
       "gridPos": {
         "h": 4,
         "w": 4,
@@ -118,12 +118,13 @@
             ]
           }
         }
-      }
+      },
+      "description": "OpenLDAP servers answering, across every directory."
     },
     {
       "id": 11,
       "type": "stat",
-      "title": "Targets configured",
+      "title": "Clusters",
       "gridPos": {
         "h": 4,
         "w": 4,
@@ -136,7 +137,14 @@
       },
       "targets": [
         {
-          "expr": "count(openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(count by (cluster) (openldap_up{group=~\"$group\", cluster=~\"$cluster\"}))",
+          "instant": true,
+          "format": "table"
         }
       ],
       "fieldConfig": {
@@ -146,12 +154,13 @@
             "fixedColor": "blue"
           }
         }
-      }
+      },
+      "description": "Directories being monitored. Each has its own replication group."
     },
     {
       "id": 12,
       "type": "stat",
-      "title": "Groups in sync",
+      "title": "Clusters in sync",
       "gridPos": {
         "h": 4,
         "w": 4,
@@ -182,7 +191,8 @@
             ]
           }
         }
-      }
+      },
+      "description": "Clusters where every node is within the replication tolerance."
     },
     {
       "id": 13,
@@ -302,7 +312,7 @@
     {
       "id": 20,
       "type": "table",
-      "title": "Target status",
+      "title": "Nodes",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -313,40 +323,184 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "One row per target: up, role, uptime, entry count, connections, thread saturation, MDB fill.",
+      "description": "One row per OpenLDAP server: is it up, how many records does it hold, and how many servers have contributed changes. Records and Change sets should agree within a cluster.",
       "targets": [
         {
-          "expr": "openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}",
-          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster, group, target) (openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
           "instant": true,
-          "refId": "A"
+          "format": "table"
         },
         {
-          "expr": "openldap_uptime_seconds{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}",
-          "format": "table",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster, group, target) (openldap_entries{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\", name=\"all\"})",
           "instant": true,
-          "refId": "B"
+          "format": "table"
         },
         {
-          "expr": "openldap_entries{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\", name=\"all\"}",
-          "format": "table",
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, group, target) (openldap_context_csn_sids{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
           "instant": true,
-          "refId": "C"
-        },
-        {
-          "expr": "openldap_connections_current{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}",
-          "format": "table",
-          "instant": true,
-          "refId": "D"
-        },
-        {
-          "expr": "openldap_mdb_pages_used_ratio{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}",
-          "format": "table",
-          "instant": true,
-          "refId": "E"
+          "format": "table"
         }
       ],
       "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "group": "Group",
+              "target": "Node",
+              "Value #A": "Up",
+              "Value #B": "Records",
+              "Value #C": "Change sets"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Up"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "up",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 900,
+      "type": "table",
+      "title": "Cluster health",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "One row per monitored directory: how many nodes, how many are up, whether all are in sync, worst lag, and links the provider has not seen.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count by (cluster) (openldap_up)",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (openldap_up)",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "min by (cluster) (openldap_replication_in_sync)",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster) (openldap_replication_lag_seconds)",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (openldap_syncrepl_link_seen_on_provider == 0)",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
         {
           "id": "merge",
           "options": {}
@@ -359,96 +513,27 @@
               "__name__": true
             },
             "renameByName": {
-              "Value #A": "up",
-              "Value #B": "uptime_s",
-              "Value #C": "entries",
-              "Value #D": "connections",
-              "Value #E": "mdb_fill"
+              "cluster": "Cluster",
+              "Value #A": "Targets",
+              "Value #B": "Up",
+              "Value #C": "In sync",
+              "Value #D": "Worst lag (s)",
+              "Value #E": "Links not seen"
             }
           }
         }
       ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
       "fieldConfig": {
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "up"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "green",
-                      "value": 1
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "mdb_fill"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 0.8
-                    },
-                    {
-                      "color": "red",
-                      "value": 0.95
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "uptime_s"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "s"
-              }
-            ]
+        "defaults": {
+          "custom": {
+            "align": "auto"
           }
-        ]
+        },
+        "overrides": []
       }
     },
     {
@@ -464,8 +549,8 @@
     },
     {
       "id": 401,
-      "type": "nodeGraph",
-      "title": "Replication topology",
+      "type": "table",
+      "title": "Replication links",
       "description": "Live architecture diagram, built from the same metrics as every other panel - not a static drawing. Nodes are every scraped target; an edge is one syncrepl consumer -> provider link, drawn from the provider's own cn=Connections (the same source as the 'Links not seen on provider' panel above), not from the consumer's config alone. Click a node or edge for detail. Ring fill on a node = openldap_up (full = up, empty = down). This panel's exact visual styling (ring/edge colors, thresholds) may need one manual pass in Grafana's panel editor after import - the node/edge data itself is exactly what the queries below return, but Node Graph's finer color knobs are easiest to get exactly right by eye in the editor rather than blind JSON.",
       "gridPos": {
         "h": 14,
@@ -478,12 +563,6 @@
         "uid": "${datasource}"
       },
       "targets": [
-        {
-          "refId": "nodes",
-          "format": "table",
-          "instant": true,
-          "expr": "openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}"
-        },
         {
           "refId": "edges",
           "format": "table",
@@ -502,76 +581,43 @@
             "excludeByName": {
               "Time": true,
               "__name__": true,
-              "detail__cluster": false
+              "instance": true,
+              "job": true,
+              "link_id": true
             },
             "renameByName": {
-              "target": "id",
-              "role": "subTitle",
-              "group": "detail__replication_group",
-              "cluster": "detail__cluster",
-              "Value": "arc__up"
+              "consumer": "Consumer",
+              "provider": "Provider",
+              "rid": "RID",
+              "group": "Group",
+              "cluster": "Cluster",
+              "Value": "Link seen"
             }
-          },
-          "filter": {
-            "id": "byRefId",
-            "options": "nodes"
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true
-            },
-            "renameByName": {
-              "consumer": "source",
-              "provider": "target",
-              "rid": "mainStat",
-              "link_id": "id",
-              "group": "detail__replication_group",
-              "cluster": "detail__cluster",
-              "Value": "detail__link_seen_on_provider"
-            }
-          },
-          "filter": {
-            "id": "byRefId",
-            "options": "edges"
           }
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "arc__up"
+              "options": "Link seen"
             },
             "properties": [
               {
-                "id": "color",
+                "id": "custom.cellOptions",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "green"
+                  "type": "color-text"
                 }
               },
-              {
-                "id": "max",
-                "value": 1
-              },
-              {
-                "id": "min",
-                "value": 0
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "detail__link_seen_on_provider"
-            },
-            "properties": [
               {
                 "id": "mappings",
                 "value": [
@@ -579,12 +625,14 @@
                     "type": "value",
                     "options": {
                       "0": {
-                        "text": "NOT SEEN - possible blackholed link",
-                        "color": "red"
+                        "text": "NO",
+                        "color": "red",
+                        "index": 0
                       },
                       "1": {
-                        "text": "seen",
-                        "color": "green"
+                        "text": "yes",
+                        "color": "green",
+                        "index": 1
                       }
                     }
                   }
@@ -595,12 +643,8 @@
         ]
       },
       "options": {
-        "nodes": {
-          "mainStatUnit": "none"
-        },
-        "edges": {
-          "mainStatUnit": "none"
-        }
+        "showHeader": true,
+        "cellHeight": "sm"
       }
     },
     {
