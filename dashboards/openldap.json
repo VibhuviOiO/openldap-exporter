@@ -99,7 +99,7 @@
         "x": 0,
         "y": 1,
         "w": 4,
-        "h": 4
+        "h": 5
       },
       "targets": [
         {
@@ -166,7 +166,7 @@
         "x": 4,
         "y": 1,
         "w": 4,
-        "h": 4
+        "h": 5
       },
       "targets": [
         {
@@ -231,9 +231,9 @@
       "description": "Percentage of replication agreements the provider has observed.",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 6,
         "w": 4,
-        "h": 4
+        "h": 5
       },
       "targets": [
         {
@@ -298,9 +298,9 @@
       "description": "Percentage of directories fully in sync.",
       "gridPos": {
         "x": 4,
-        "y": 5,
+        "y": 6,
         "w": 4,
-        "h": 4
+        "h": 5
       },
       "targets": [
         {
@@ -362,7 +362,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 11,
         "w": 24,
         "h": 1
       },
@@ -379,7 +379,7 @@
       "description": "OpenLDAP servers in this directory.",
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 12,
         "w": 6,
         "h": 5
       },
@@ -400,7 +400,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "horizontal",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -443,7 +443,7 @@
       "description": "Servers answering right now.",
       "gridPos": {
         "x": 6,
-        "y": 10,
+        "y": 12,
         "w": 6,
         "h": 5
       },
@@ -464,7 +464,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "horizontal",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -507,7 +507,7 @@
       "description": "Directory entries this cluster holds (one copy, NOT multiplied by node count). Every node should hold the same number \u2014 a lower value on one node means replication has not delivered those entries yet.",
       "gridPos": {
         "x": 12,
-        "y": 10,
+        "y": 12,
         "w": 6,
         "h": 5
       },
@@ -528,7 +528,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "horizontal",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -571,7 +571,7 @@
       "description": "Nodes within the replication tolerance.",
       "gridPos": {
         "x": 18,
-        "y": 10,
+        "y": 12,
         "w": 6,
         "h": 5
       },
@@ -592,7 +592,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "horizontal",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -632,12 +632,12 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "One row per OpenLDAP server in this cluster: Up, Records (entries), Change sets (contextCSN sids), In sync and Worst lag are all per node, so a node that has fallen behind shows on its own row. Records and Change sets should agree across the cluster. Role is what the exporter labels the target as; in a multi-provider mesh a node is both.",
+      "description": "One row per OpenLDAP server in this cluster. Up, Records (entries), Change sets (contextCSN sids), In sync, Last change (newest contextCSN timestamp) and Worst lag are all per node, so a node that has fallen behind shows on its own row. Identical Last change across a cluster means the nodes have converged on the same newest change. Role is hidden: every node in a multi-provider mesh is labelled provider.",
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 17,
         "w": 24,
-        "h": 8
+        "h": 5
       },
       "targets": [
         {
@@ -689,6 +689,16 @@
           "instant": true,
           "format": "table",
           "expr": "max by (cluster, group, target, role) (openldap_replication_lag_seconds{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max by (cluster, group, target, role) (openldap_context_csn_timestamp_seconds{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}) * 1000"
         }
       ],
       "transformations": [
@@ -709,7 +719,8 @@
               "instance": true,
               "job": true,
               "cluster": true,
-              "group": true
+              "group": true,
+              "role": true
             },
             "renameByName": {
               "cluster": "Cluster",
@@ -720,7 +731,8 @@
               "Value #B": "Records",
               "Value #C": "Change sets",
               "Value #D": "In sync",
-              "Value #E": "Worst lag (s)"
+              "Value #E": "Worst lag (s)",
+              "Value #F": "Last change"
             }
           }
         }
@@ -831,6 +843,22 @@
                 "value": "s"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last change"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
           }
         ]
       }
@@ -844,7 +872,7 @@
         "x": 8,
         "y": 1,
         "w": 16,
-        "h": 8
+        "h": 10
       },
       "datasource": {
         "type": "prometheus",
@@ -938,7 +966,7 @@
       "title": "Replication",
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 22,
         "w": 24,
         "h": 1
       },
@@ -952,7 +980,7 @@
       "title": "Replication lag by sid",
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 23,
         "w": 12,
         "h": 6
       },
@@ -1006,7 +1034,7 @@
       "title": "In sync (by target, per suffix)",
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 23,
         "w": 12,
         "h": 6
       },
@@ -1046,7 +1074,7 @@
       "title": "Sids missing per target",
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 29,
         "w": 12,
         "h": 6
       },
@@ -1084,7 +1112,7 @@
       "title": "Syncrepl consumer links vs provider reality",
       "gridPos": {
         "x": 12,
-        "y": 30,
+        "y": 29,
         "w": 12,
         "h": 6
       },
@@ -1155,7 +1183,7 @@
       "title": "cn=Monitor",
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 35,
         "w": 24,
         "h": 1
       },
@@ -1169,7 +1197,7 @@
       "title": "Operations / sec",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 36,
         "w": 8,
         "h": 6
       },
@@ -1209,7 +1237,7 @@
       "title": "Current connections",
       "gridPos": {
         "x": 8,
-        "y": 37,
+        "y": 36,
         "w": 8,
         "h": 6
       },
@@ -1245,7 +1273,7 @@
       "title": "Thread pool: active / max",
       "gridPos": {
         "x": 16,
-        "y": 37,
+        "y": 36,
         "w": 8,
         "h": 6
       },
@@ -1285,7 +1313,7 @@
       "title": "Pending operations",
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 42,
         "w": 8,
         "h": 6
       },
@@ -1333,7 +1361,7 @@
       "title": "Bytes / sec to clients",
       "gridPos": {
         "x": 8,
-        "y": 43,
+        "y": 42,
         "w": 8,
         "h": 6
       },
@@ -1370,7 +1398,7 @@
       "title": "Bind duration",
       "gridPos": {
         "x": 16,
-        "y": 43,
+        "y": 42,
         "w": 8,
         "h": 6
       },
@@ -1407,7 +1435,7 @@
       "title": "Capacity",
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 48,
         "w": 24,
         "h": 1
       },
@@ -1421,7 +1449,7 @@
       "title": "LMDB map used ratio",
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 49,
         "w": 8,
         "h": 6
       },
@@ -1476,7 +1504,7 @@
       "title": "Entry counts",
       "gridPos": {
         "x": 8,
-        "y": 50,
+        "y": 49,
         "w": 8,
         "h": 6
       },
@@ -1512,7 +1540,7 @@
       "title": "Clock offset vs exporter wall clock",
       "gridPos": {
         "x": 16,
-        "y": 50,
+        "y": 49,
         "w": 8,
         "h": 6
       },
@@ -1562,7 +1590,7 @@
       "title": "TLS certificate days remaining",
       "gridPos": {
         "x": 0,
-        "y": 56,
+        "y": 55,
         "w": 8,
         "h": 6
       },
@@ -1608,5 +1636,12 @@
         }
       }
     }
+  ],
+  "description": "OpenLDAP 2.6 monitoring: replication topology and convergence (contextCSN), syncrepl agreement links, LMDB, cn=Monitor operations and TLS expiry. Built for the vibhuvioio/openldap-exporter. Pick your Prometheus with the datasource variable; clusters appear automatically from the 'cluster' label your Prometheus attaches to each exporter.",
+  "tags": [
+    "openldap",
+    "ldap",
+    "replication",
+    "syncrepl"
   ]
 }
