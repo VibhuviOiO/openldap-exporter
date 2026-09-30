@@ -9,9 +9,19 @@ Artifacts in this repo:
 |---|---|
 | `dashboards/openldap.json` | source of truth, provisioned into the monitoring stack |
 | `dashboards/openldap-catalog.json` | **the file you upload** — Classic model with `__inputs` |
+| `dashboards/export-for-catalog.py` | regenerates the upload file from the source dashboard |
+| `dashboards/catalog-README.md` | **paste into the README field** of the listing |
 | `dashboards/screenshots/openldap-overview.png` | screenshot 1 |
 | `dashboards/screenshots/openldap-replication.png` | screenshot 2 |
 | `dashboards/screenshots/openldap-full.png` | whole dashboard, for a README embed |
+
+The **logo** is the vibhuvioio brand mark, not an OpenLDAP one — the catalog logo
+identifies whoever maintains the dashboard, and the OpenLDAP mark belongs to the
+OpenLDAP Foundation:
+
+```
+/Users/balu/OiO/repos/vibhuvioio.github.io/public/img/logo.png     # 500x500 PNG, transparent
+```
 
 ## The one rule that catches people
 
@@ -44,10 +54,13 @@ own, not datasource inputs.
 3. Upload `dashboards/openldap-catalog.json`.
 4. Fill the metadata:
    - **Title**: `OpenLDAP 2.6 — Replication, Convergence & Health`
-   - **Data source**: Prometheus
+   - **Data source**: `Prometheus`
+   - **Data source description**: already carried in the upload file's `__inputs`,
+     so the import dialog tells the user about the `cluster` label requirement
    - **Description**: use the block below
+   - **Logo**: the vibhuvioio brand mark (path in the table above)
    - **Screenshots**: upload the two PNGs
-   - **README**: paste the markdown below
+   - **README**: paste `dashboards/catalog-README.md`
 5. **Save and Publish**. The public page can 404 for several hours before it
    appears. Later edits use **Submit** on the same page, which also updates
    screenshots, logo and README.
@@ -61,65 +74,18 @@ own, not datasource inputs.
 
 ## README (paste into the listing)
 
-````markdown
-# OpenLDAP 2.6 — Replication, Convergence & Health
+The text is maintained once, in `dashboards/catalog-README.md` — paste that file's
+contents into the README field. It is not duplicated here, because a second copy
+drifts.
 
-Works with [vibhuvioio/openldap-exporter](https://github.com/VibhuviOiO/openldap-exporter).
+Before publishing, confirm the screenshot URL inside it actually resolves:
 
-## Required: a `cluster` label
-
-The dashboard groups everything by a `cluster` label that **the exporter does not
-emit** — your Prometheus must attach it, one per exporter instance:
-
-```yaml
-scrape_configs:
-  - job_name: openldap
-    static_configs:
-      - targets: ['openldap-exporter:9330']
-        labels: { cluster: prod }
-      - targets: ['openldap-exporter-alt:9331']
-        labels: { cluster: staging }
+```
+https://raw.githubusercontent.com/VibhuviOiO/openldap-exporter/main/dashboards/screenshots/openldap-overview.png
 ```
 
-Run one exporter instance per directory: the `entries:` searches are global to an
-instance, and each directory has its own base DN.
-
-Without this label the `cluster`, `group` and `target` variables come up empty
-and most panels show no data.
-
-## Variables
-
-| Variable | Meaning |
-|---|---|
-| `datasource` | resolved at import |
-| `cluster` | one per exporter instance (from the label above) |
-| `group` | the exporter's `group:` for a target — nodes that must agree |
-| `target` | a single server |
-
-## What the panels answer
-
-Reading a replication problem, in the order that isolates the cause:
-
-1. **Nodes up** — is anything answering.
-2. **Links healthy** — did providers observe their consumers connect.
-3. **In sync** — do the contextCSNs agree.
-4. **Replication lag by sid** — how far behind, per sid.
-5. **Consumer links seen by providers** — which node's link is dead while its own
-   socket still looks healthy.
-6. **Records / Change sets / Last change** per node — did the data actually arrive.
-
-`Last change` is the newest contextCSN timestamp for a node. Identical values
-across a cluster mean the nodes converged on the same newest change; a node
-lagging behind shows an older timestamp.
-
-## Panels that are empty when healthy
-
-- **Sids missing per target** — only lists sids a node is missing.
-- **TLS certificate days remaining** — needs `openldap_tls_certificate_expiry_seconds`,
-  which requires TLS enabled on the target.
-
-Empty is the good outcome, not a broken panel.
-````
+That path only works once `dashboards/screenshots/` is committed and pushed to
+`main`.
 
 ## After publishing
 

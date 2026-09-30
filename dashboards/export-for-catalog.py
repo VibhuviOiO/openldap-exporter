@@ -47,12 +47,18 @@ def main() -> int:
     ]
     removed = len(before) - len(dashboard["templating"]["list"])
 
-    # 3. The import contract.
+    # 3. The import contract. The description is shown in the import dialog, so
+    #    it says the one thing an importer must do or every panel is empty.
     dashboard["__inputs"] = [
         {
             "name": "DS_PROMETHEUS",
             "label": "Prometheus",
-            "description": "",
+            "description": (
+                "Prometheus scraping the vibhuvioio/openldap-exporter. Run one "
+                "exporter instance per directory, and attach a `cluster` label to "
+                "each scrape target in prometheus.yml - the dashboard groups every "
+                "panel by that label, and shows no data without it."
+            ),
             "type": "datasource",
             "pluginId": "prometheus",
             "pluginName": "Prometheus",
@@ -90,7 +96,13 @@ def main() -> int:
         )
 
     # A catalog upload is an import, not a version of the local dashboard.
+    # Drop uid and id: keeping them makes the import collide with any existing
+    # dashboard that already has that uid. Locally that surfaces as
+    # "Cannot save provisioned dashboard"; for anyone who already imported the
+    # dashboard it is an overwrite prompt. Grafana assigns a fresh uid on import.
     dashboard["version"] = 0
+    dashboard.pop("uid", None)
+    dashboard.pop("id", None)
 
     OUT.write_text(json.dumps(dashboard, indent=2) + "\n")
 
@@ -98,6 +110,7 @@ def main() -> int:
     print(f"  removed {removed} datasource variable(s)")
     print(f"  panel types: {', '.join(sorted(panel_types))}")
     print(f"  unresolved ${{datasource}} references: {leftover}")
+    print(f"  uid present: {'uid' in dashboard}")
     print(f"  wrote {OUT.relative_to(HERE.parent)}")
 
     if leftover:

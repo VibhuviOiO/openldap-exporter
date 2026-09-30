@@ -1,6 +1,5 @@
 {
   "title": "OpenLDAP",
-  "uid": "openldap-exporter",
   "schemaVersion": 39,
   "version": 0,
   "editable": true,
@@ -1654,7 +1653,7 @@
     {
       "name": "DS_PROMETHEUS",
       "label": "Prometheus",
-      "description": "",
+      "description": "Prometheus scraping the vibhuvioio/openldap-exporter. Run one exporter instance per directory, and attach a `cluster` label to each scrape target in prometheus.yml - the dashboard groups every panel by that label, and shows no data without it.",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
