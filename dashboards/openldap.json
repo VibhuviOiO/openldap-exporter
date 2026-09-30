@@ -77,63 +77,29 @@
       "type": "row",
       "title": "Overview",
       "gridPos": {
-        "h": 1,
-        "w": 24,
         "x": 0,
-        "y": 0
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "fieldConfig": {
+        "defaults": {}
       }
     },
     {
-      "id": 10,
-      "type": "stat",
+      "id": 960,
+      "type": "gauge",
       "title": "Nodes up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Percentage of OpenLDAP servers answering.",
       "gridPos": {
-        "h": 4,
-        "w": 4,
         "x": 0,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "expr": "sum(openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
-          "legendFormat": "up"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        }
-      },
-      "description": "OpenLDAP servers answering, across every directory."
-    },
-    {
-      "id": 11,
-      "type": "stat",
-      "title": "Clusters",
-      "gridPos": {
-        "h": 4,
+        "y": 1,
         "w": 4,
-        "x": 4,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
+        "h": 4
       },
       "targets": [
         {
@@ -142,122 +108,315 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(count by (cluster) (openldap_up{group=~\"$group\", cluster=~\"$cluster\"}))",
           "instant": true,
-          "format": "table"
+          "format": "table",
+          "expr": "100 * (sum(openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})) / (count(openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}))"
         }
       ],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 961,
+      "type": "gauge",
+      "title": "Replication in sync",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Percentage of nodes within the replication tolerance.",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "100 * (sum(openldap_replication_in_sync{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})) / (count(openldap_replication_in_sync{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"}))"
+        }
+      ],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 962,
+      "type": "gauge",
+      "title": "Links healthy",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Percentage of replication agreements the provider has observed.",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "100 * (sum(openldap_syncrepl_link_seen_on_provider{group=~\"$group\", cluster=~\"$cluster\"})) / (count(openldap_syncrepl_link_seen_on_provider{group=~\"$group\", cluster=~\"$cluster\"}))"
+        }
+      ],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 963,
+      "type": "gauge",
+      "title": "Clusters in sync",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Percentage of directories fully in sync.",
+      "gridPos": {
+        "x": 4,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "100 * (sum(openldap_replication_group_in_sync{group=~\"$group\", cluster=~\"$cluster\"})) / (count(openldap_replication_group_in_sync{group=~\"$group\", cluster=~\"$cluster\"}))"
+        }
+      ],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 990,
+      "type": "row",
+      "title": "$cluster",
+      "repeat": "cluster",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 980,
+      "type": "stat",
+      "title": "Nodes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "OpenLDAP servers in this directory.",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "count(openldap_up{cluster=\"$cluster\"})"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          }
-        }
-      },
-      "description": "Directories being monitored. Each has its own replication group."
-    },
-    {
-      "id": 12,
-      "type": "stat",
-      "title": "Clusters in sync",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "expr": "sum(openldap_replication_group_in_sync{group=~\"$group\", cluster=~\"$cluster\"})"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
+          },
           "thresholds": {
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        }
-      },
-      "description": "Clusters where every node is within the replication tolerance."
-    },
-    {
-      "id": 13,
-      "type": "stat",
-      "title": "Worst replication lag",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "expr": "max(openldap_replication_lag_seconds{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 30
-              },
-              {
-                "color": "red",
-                "value": 300
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 14,
-      "type": "stat",
-      "title": "Links not seen on provider",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "syncrepl consumer links whose provider shows no matching connection - the blackholed-link signature: config looks correct and the consumer socket can look healthy while the provider never received it.",
-      "targets": [
-        {
-          "expr": "sum(openldap_syncrepl_link_seen_on_provider{group=~\"$group\", cluster=~\"$cluster\"} == 0) OR vector(0)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -269,61 +428,25 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       }
     },
     {
-      "id": 15,
+      "id": 981,
       "type": "stat",
-      "title": "Config drift findings",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 1
-      },
+      "title": "Servers up",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "no-keepalive + finite-retry + self-reference + read-only + multiprovider-off, summed.",
-      "targets": [
-        {
-          "expr": "sum(openldap_syncrepl_consumer_keepalive{group=~\"$group\", cluster=~\"$cluster\"} == 0) + sum(openldap_syncrepl_consumer_retry_forever{group=~\"$group\", cluster=~\"$cluster\"} == 0) + sum(openldap_syncrepl_consumer_self_reference{group=~\"$group\", cluster=~\"$cluster\"} == 1) + sum(openldap_database_readonly{group=~\"$group\", cluster=~\"$cluster\"} == 1) OR vector(0)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 20,
-      "type": "table",
-      "title": "Nodes",
+      "description": "Servers answering right now.",
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 5
+        "x": 6,
+        "y": 10,
+        "w": 6,
+        "h": 5
       },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "One row per OpenLDAP server: is it up, how many records does it hold, and how many servers have contributed changes. Records and Change sets should agree within a cluster.",
       "targets": [
         {
           "refId": "A",
@@ -331,7 +454,199 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (cluster, group, target) (openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
+          "instant": true,
+          "format": "table",
+          "expr": "sum(openldap_up{cluster=\"$cluster\"})"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 982,
+      "type": "stat",
+      "title": "Records",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Directory entries this cluster holds (one copy, NOT multiplied by node count). Every node should hold the same number \u2014 a lower value on one node means replication has not delivered those entries yet.",
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max(openldap_entries{cluster=\"$cluster\", name=\"all\"})"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 983,
+      "type": "stat",
+      "title": "In sync",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Nodes within the replication tolerance.",
+      "gridPos": {
+        "x": 18,
+        "y": 10,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "sum(openldap_replication_in_sync{cluster=\"$cluster\"})"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 940,
+      "type": "table",
+      "title": "Nodes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "One row per OpenLDAP server in this cluster: Up, Records (entries), Change sets (contextCSN sids), In sync and Worst lag are all per node, so a node that has fallen behind shows on its own row. Records and Change sets should agree across the cluster. Role is what the exporter labels the target as; in a multi-provider mesh a node is both.",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster, group, target, role) (openldap_up{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
           "instant": true,
           "format": "table"
         },
@@ -341,7 +656,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (cluster, group, target) (openldap_entries{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\", name=\"all\"})",
+          "expr": "sum by (cluster, group, target, role) (openldap_entries{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\", name=\"all\"})",
           "instant": true,
           "format": "table"
         },
@@ -351,9 +666,29 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (cluster, group, target) (openldap_context_csn_sids{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
+          "expr": "max by (cluster, group, target, role) (openldap_context_csn_sids{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})",
           "instant": true,
           "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "sum by (cluster, group, target, role) (openldap_replication_in_sync{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max by (cluster, group, target, role) (openldap_replication_lag_seconds{group=~\"$group\", cluster=~\"$cluster\", target=~\"$target\"})"
         }
       ],
       "transformations": [
@@ -372,15 +707,20 @@
               "Time": true,
               "__name__": true,
               "instance": true,
-              "job": true
+              "job": true,
+              "cluster": true,
+              "group": true
             },
             "renameByName": {
               "cluster": "Cluster",
               "group": "Group",
               "target": "Node",
+              "role": "Role",
               "Value #A": "Up",
               "Value #B": "Records",
-              "Value #C": "Change sets"
+              "Value #C": "Change sets",
+              "Value #D": "In sync",
+              "Value #E": "Worst lag (s)"
             }
           }
         }
@@ -401,7 +741,7 @@
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-text"
+                  "type": "color-background"
                 }
               },
               {
@@ -425,138 +765,86 @@
                 ]
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Records"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-Blues"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In sync"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OUT OF SYNC",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "in sync",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Worst lag (s)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
           }
         ]
       }
     },
     {
-      "id": 900,
-      "type": "table",
-      "title": "Cluster health",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "One row per monitored directory: how many nodes, how many are up, whether all are in sync, worst lag, and links the provider has not seen.",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 5
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "count by (cluster) (openldap_up)",
-          "instant": true,
-          "format": "table"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (cluster) (openldap_up)",
-          "instant": true,
-          "format": "table"
-        },
-        {
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "min by (cluster) (openldap_replication_in_sync)",
-          "instant": true,
-          "format": "table"
-        },
-        {
-          "refId": "D",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "max by (cluster) (openldap_replication_lag_seconds)",
-          "instant": true,
-          "format": "table"
-        },
-        {
-          "refId": "E",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (cluster) (openldap_syncrepl_link_seen_on_provider == 0)",
-          "instant": true,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "labelsToFields",
-          "options": {}
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true
-            },
-            "renameByName": {
-              "cluster": "Cluster",
-              "Value #A": "Targets",
-              "Value #B": "Up",
-              "Value #C": "In sync",
-              "Value #D": "Worst lag (s)",
-              "Value #E": "Links not seen"
-            }
-          }
-        }
-      ],
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto"
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 400,
-      "type": "row",
-      "title": "Topology",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      }
-    },
-    {
       "id": 401,
       "type": "table",
-      "title": "Replication links",
-      "description": "Live architecture diagram, built from the same metrics as every other panel - not a static drawing. Nodes are every scraped target; an edge is one syncrepl consumer -> provider link, drawn from the provider's own cn=Connections (the same source as the 'Links not seen on provider' panel above), not from the consumer's config alone. Click a node or edge for detail. Ring fill on a node = openldap_up (full = up, empty = down). This panel's exact visual styling (ring/edge colors, thresholds) may need one manual pass in Grafana's panel editor after import - the node/edge data itself is exactly what the queries below return, but Node Graph's finer color knobs are easiest to get exactly right by eye in the editor rather than blind JSON.",
+      "title": "Replication topology",
+      "description": "One row per replication agreement. \"Consumer\" pulls from \"Provider\" - in a multi-provider mesh every node is both, which is why each node appears in both columns. Link seen = the provider actually observed that consumer connect; NO means the link is dead even though both nodes look healthy.",
       "gridPos": {
-        "h": 14,
-        "w": 24,
-        "x": 0,
-        "y": 14
+        "x": 8,
+        "y": 1,
+        "w": 16,
+        "h": 8
       },
       "datasource": {
         "type": "prometheus",
@@ -586,9 +874,9 @@
               "link_id": true
             },
             "renameByName": {
-              "consumer": "Consumer",
-              "provider": "Provider",
-              "rid": "RID",
+              "consumer": "Consumer (pulls from)",
+              "provider": "Provider (serves)",
+              "rid": "Agreement (RID)",
               "group": "Group",
               "cluster": "Cluster",
               "Value": "Link seen"
@@ -599,10 +887,7 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
+            "align": "auto"
           }
         },
         "overrides": [
@@ -615,7 +900,7 @@
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-text"
+                  "type": "color-background"
                 }
               },
               {
@@ -652,10 +937,13 @@
       "type": "row",
       "title": "Replication",
       "gridPos": {
-        "h": 1,
-        "w": 24,
         "x": 0,
-        "y": 28
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "fieldConfig": {
+        "defaults": {}
       }
     },
     {
@@ -663,10 +951,10 @@
       "type": "timeseries",
       "title": "Replication lag by sid",
       "gridPos": {
-        "h": 9,
-        "w": 12,
         "x": 0,
-        "y": 29
+        "y": 24,
+        "w": 12,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -684,7 +972,11 @@
           "unit": "s",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
           },
           "thresholds": {
             "steps": [
@@ -701,6 +993,9 @@
                 "value": 300
               }
             ]
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -710,10 +1005,10 @@
       "type": "state-timeline",
       "title": "In sync (by target, per suffix)",
       "gridPos": {
-        "h": 9,
-        "w": 12,
         "x": 12,
-        "y": 29
+        "y": 24,
+        "w": 12,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -750,10 +1045,10 @@
       "type": "table",
       "title": "Sids missing per target",
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 38
+        "y": 30,
+        "w": 12,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -778,17 +1073,20 @@
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      }
     },
     {
       "id": 104,
       "type": "table",
       "title": "Syncrepl consumer links vs provider reality",
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
-        "y": 38
+        "y": 30,
+        "w": 12,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -847,7 +1145,8 @@
               }
             ]
           }
-        ]
+        ],
+        "defaults": {}
       }
     },
     {
@@ -855,10 +1154,13 @@
       "type": "row",
       "title": "cn=Monitor",
       "gridPos": {
-        "h": 1,
-        "w": 24,
         "x": 0,
-        "y": 46
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "fieldConfig": {
+        "defaults": {}
       }
     },
     {
@@ -866,10 +1168,10 @@
       "type": "timeseries",
       "title": "Operations / sec",
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 47
+        "y": 37,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -886,10 +1188,17 @@
           "unit": "ops",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 22,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -899,10 +1208,10 @@
       "type": "timeseries",
       "title": "Current connections",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 47
+        "x": 8,
+        "y": 37,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -918,7 +1227,14 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -928,10 +1244,10 @@
       "type": "timeseries",
       "title": "Thread pool: active / max",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 55
+        "x": 16,
+        "y": 37,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -951,7 +1267,14 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 5
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -961,10 +1284,10 @@
       "type": "timeseries",
       "title": "Pending operations",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 55
+        "x": 0,
+        "y": 43,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -980,7 +1303,11 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
           },
           "thresholds": {
             "steps": [
@@ -993,6 +1320,9 @@
                 "value": 10
               }
             ]
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1002,10 +1332,10 @@
       "type": "timeseries",
       "title": "Bytes / sec to clients",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 63
+        "x": 8,
+        "y": 43,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1022,7 +1352,14 @@
           "unit": "Bps",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1032,10 +1369,10 @@
       "type": "timeseries",
       "title": "Bind duration",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 63
+        "x": 16,
+        "y": 43,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1052,7 +1389,14 @@
           "unit": "s",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1062,10 +1406,13 @@
       "type": "row",
       "title": "Capacity",
       "gridPos": {
-        "h": 1,
-        "w": 24,
         "x": 0,
-        "y": 71
+        "y": 49,
+        "w": 24,
+        "h": 1
+      },
+      "fieldConfig": {
+        "defaults": {}
       }
     },
     {
@@ -1073,10 +1420,10 @@
       "type": "timeseries",
       "title": "LMDB map used ratio",
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 72
+        "y": 50,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1095,7 +1442,11 @@
           "max": 1,
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
           },
           "thresholds": {
             "steps": [
@@ -1112,6 +1463,9 @@
                 "value": 0.95
               }
             ]
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1121,10 +1475,10 @@
       "type": "timeseries",
       "title": "Entry counts",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 72
+        "x": 8,
+        "y": 50,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1140,7 +1494,14 @@
         "defaults": {
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 0
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1150,10 +1511,10 @@
       "type": "timeseries",
       "title": "Clock offset vs exporter wall clock",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 80
+        "x": 16,
+        "y": 50,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1171,7 +1532,11 @@
           "unit": "s",
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 10
+            "fillOpacity": 22,
+            "lineWidth": 2,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
           },
           "thresholds": {
             "steps": [
@@ -1184,6 +1549,9 @@
                 "value": 5
               }
             ]
+          },
+          "color": {
+            "mode": "continuous-Blues"
           }
         }
       }
@@ -1193,10 +1561,10 @@
       "type": "timeseries",
       "title": "TLS certificate days remaining",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 80
+        "x": 0,
+        "y": 56,
+        "w": 8,
+        "h": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -1226,6 +1594,16 @@
                 "value": 30
               }
             ]
+          },
+          "color": {
+            "mode": "continuous-Blues"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
           }
         }
       }
